@@ -8,32 +8,25 @@ import {
    listWebhookEndpoints,
    updateWebhookEndpoint,
 } from "@packages/database/repositories/webhook-repository";
+import { webhookEndpoints } from "@packages/database/schemas/webhooks";
 import { createEmitFn } from "@packages/events/emit";
 import {
    emitWebhookEndpointCreated,
    emitWebhookEndpointDeleted,
    emitWebhookEndpointUpdated,
 } from "@packages/events/webhook";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Validation Schemas
-// =============================================================================
+const createWebhookSchema = createInsertSchema(webhookEndpoints)
+   .pick({ url: true, description: true, eventPatterns: true })
+   .extend({ eventPatterns: z.array(z.string()).min(1) });
 
-const createWebhookSchema = z.object({
-   url: z.string().url(),
-   description: z.string().optional(),
-   eventPatterns: z.array(z.string()).min(1),
-});
-
-const updateWebhookSchema = z.object({
-   id: z.string().uuid(),
-   url: z.string().url().optional(),
-   description: z.string().optional(),
-   eventPatterns: z.array(z.string()).min(1).optional(),
-   isActive: z.boolean().optional(),
-});
+const updateWebhookSchema = createInsertSchema(webhookEndpoints)
+   .pick({ url: true, description: true, eventPatterns: true, isActive: true })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
 // =============================================================================
 // Webhook Procedures

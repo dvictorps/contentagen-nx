@@ -187,14 +187,9 @@ export const regeneratePublicApiKey = protectedProcedure
          // Verify team belongs to this organization
          await verifyTeamOwnership(db, input.teamId, organizationId);
 
-         // Find and delete existing public key for this team
-         console.log("[regeneratePublicApiKey] Listing API keys...");
          const existingKeys = await auth.api.listApiKeys({
             headers,
          });
-         console.log(
-            `[regeneratePublicApiKey] Found ${existingKeys?.length || 0} keys`,
-         );
 
          const existingPublicKey = existingKeys.find(
             (key) =>
@@ -203,22 +198,14 @@ export const regeneratePublicApiKey = protectedProcedure
          );
 
          if (existingPublicKey) {
-            console.log(
-               `[regeneratePublicApiKey] Deleting existing key: ${existingPublicKey.id}`,
-            );
             await auth.api.deleteApiKey({
                headers,
                body: { keyId: existingPublicKey.id },
             });
          }
 
-         // Resolve the organization's plan for metadata
-         console.log("[regeneratePublicApiKey] Resolving organization plan...");
          const plan = await resolveOrganizationPlan(db, organizationId);
-         console.log(`[regeneratePublicApiKey] Plan: ${plan}`);
 
-         // Create a new public API key
-         console.log("[regeneratePublicApiKey] Creating new API key...");
          const newKey = await auth.api.createApiKey({
             headers,
             body: {
@@ -241,12 +228,6 @@ export const regeneratePublicApiKey = protectedProcedure
 
          return { publicApiKey: newKey.key };
       } catch (error) {
-         console.error("[regeneratePublicApiKey] Error:", error);
-         console.error(
-            "[regeneratePublicApiKey] Error stack:",
-            error instanceof Error ? error.stack : "No stack",
-         );
-
          // Convert Better Auth API errors to ORPCError
          if (error && typeof error === "object" && "status" in error) {
             const apiError = error as { status: string; statusCode?: number };

@@ -11,40 +11,34 @@ import {
 } from "@packages/database/repositories/experiments-repository";
 import { content } from "@packages/database/schemas/content";
 import { experimentDailyStats } from "@packages/database/schemas/event-views";
-import { experimentVariants } from "@packages/database/schemas/experiments";
+import {
+   experiments,
+   experimentVariants,
+} from "@packages/database/schemas/experiments";
 import { forms } from "@packages/database/schemas/forms";
-import { EXPERIMENT_TARGET_TYPES } from "@packages/events/experiments";
 import { and, eq } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Schemas
-// =============================================================================
-
-const createExperimentSchema = z.object({
-   name: z.string().min(1),
-   hypothesis: z.string().optional(),
-   targetType: z.enum(EXPERIMENT_TARGET_TYPES),
-   goal: z.enum(["conversion", "ctr", "time_on_page", "form_submit"]),
+const createExperimentSchema = createInsertSchema(experiments).pick({
+   name: true,
+   hypothesis: true,
+   targetType: true,
+   goal: true,
 });
 
-const updateExperimentSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   hypothesis: z.string().optional(),
-   targetType: z.enum(EXPERIMENT_TARGET_TYPES).optional(),
-   goal: z
-      .enum(["conversion", "ctr", "time_on_page", "form_submit"])
-      .optional(),
-});
+const updateExperimentSchema = createInsertSchema(experiments)
+   .pick({ name: true, hypothesis: true, targetType: true, goal: true })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
-const addVariantSchema = z.object({
-   experimentId: z.string().uuid(),
-   name: z.string().min(1),
-   isControl: z.boolean().default(false),
-   contentId: z.string().uuid().optional(),
-   formId: z.string().uuid().optional(),
+const addVariantSchema = createInsertSchema(experimentVariants).pick({
+   experimentId: true,
+   name: true,
+   isControl: true,
+   contentId: true,
+   formId: true,
 });
 
 // =============================================================================

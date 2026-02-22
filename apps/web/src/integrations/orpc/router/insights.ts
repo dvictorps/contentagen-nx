@@ -16,25 +16,19 @@ import {
    emitInsightDeleted,
    emitInsightUpdated,
 } from "@packages/events/insight";
+import { createInsertSchema } from "drizzle-zod";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-const createInsightSchema = z.object({
-   name: z.string().min(1),
-   description: z.string().optional(),
-   type: z.enum(["trends", "funnels", "retention"]),
-   config: insightConfigSchema,
-   defaultSize: z.enum(["sm", "md", "lg", "full"]).optional().default("md"),
-});
+const createInsightSchema = createInsertSchema(insights)
+   .pick({ name: true, description: true, type: true, config: true, defaultSize: true })
+   .extend({ config: insightConfigSchema });
 
-const updateInsightSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   description: z.string().optional(),
-   config: insightConfigSchema.optional(),
-   defaultSize: z.enum(["sm", "md", "lg", "full"]).optional(),
-});
+const updateInsightSchema = createInsertSchema(insights)
+   .pick({ name: true, description: true, config: true, defaultSize: true })
+   .partial()
+   .extend({ id: z.string().uuid(), config: insightConfigSchema.optional() });
 
 export const create = protectedProcedure
    .input(createInsightSchema)

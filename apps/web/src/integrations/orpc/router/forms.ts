@@ -8,70 +8,44 @@ import {
    listFormsByTeam,
    updateForm,
 } from "@packages/database/repositories/form-repository";
+import { forms } from "@packages/database/schemas/forms";
 import { createEmitFn } from "@packages/events/emit";
 import {
    emitFormCreated,
    emitFormDeleted,
    emitFormUpdated,
 } from "@packages/events/forms";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Validation Schemas
-// =============================================================================
-
-const fieldSchema = z.object({
-   id: z.string(),
-   type: z.enum([
-      "text",
-      "email",
-      "textarea",
-      "checkbox",
-      "select",
-      "number",
-      "date",
-      "rating",
-      "file",
-   ]),
-   label: z.string(),
-   placeholder: z.string().optional(),
-   required: z.boolean(),
-   options: z.array(z.string()).optional(),
+const createFormSchema = createInsertSchema(forms).pick({
+   name: true,
+   description: true,
+   fields: true,
+   settings: true,
+   title: true,
+   subtitle: true,
+   icon: true,
+   buttonText: true,
+   layout: true,
 });
 
-const settingsSchema = z.object({
-   successMessage: z.string().optional(),
-   redirectUrl: z.string().optional(),
-   sendEmailNotification: z.boolean().optional(),
-   emailRecipients: z.array(z.string()).optional(),
-});
-
-const createFormSchema = z.object({
-   name: z.string().min(1),
-   description: z.string().optional(),
-   fields: z.array(fieldSchema).min(1),
-   settings: settingsSchema.optional(),
-   title: z.string().optional(),
-   subtitle: z.string().optional(),
-   icon: z.string().optional(),
-   buttonText: z.string().optional(),
-   layout: z.enum(["card", "inline", "banner"]).optional(),
-});
-
-const updateFormSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   description: z.string().optional(),
-   fields: z.array(fieldSchema).min(1).optional(),
-   settings: settingsSchema.optional(),
-   isActive: z.boolean().optional(),
-   title: z.string().optional(),
-   subtitle: z.string().optional(),
-   icon: z.string().optional(),
-   buttonText: z.string().optional(),
-   layout: z.enum(["card", "inline", "banner"]).optional(),
-});
+const updateFormSchema = createInsertSchema(forms)
+   .pick({
+      name: true,
+      description: true,
+      fields: true,
+      settings: true,
+      isActive: true,
+      title: true,
+      subtitle: true,
+      icon: true,
+      buttonText: true,
+      layout: true,
+   })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
 // =============================================================================
 // Form Procedures

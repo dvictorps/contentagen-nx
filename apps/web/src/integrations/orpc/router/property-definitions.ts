@@ -6,33 +6,33 @@ import {
    listPropertyDefinitions,
    updatePropertyDefinition,
 } from "@packages/database/repositories/property-definition-repository";
+import { propertyDefinitions } from "@packages/database/schemas/property-definitions";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Validation Schemas
-// =============================================================================
-
-const createPropertyDefinitionSchema = z.object({
-   name: z.string().min(1),
-   type: z.enum(["string", "number", "boolean", "datetime", "array"]),
-   description: z.string().optional(),
-   eventNames: z.array(z.string()).optional(),
-   isNumerical: z.boolean().optional(),
-   tags: z.array(z.string()).optional(),
+const createPropertyDefinitionSchema = createInsertSchema(
+   propertyDefinitions,
+).pick({
+   name: true,
+   type: true,
+   description: true,
+   eventNames: true,
+   isNumerical: true,
+   tags: true,
 });
 
-const updatePropertyDefinitionSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   type: z
-      .enum(["string", "number", "boolean", "datetime", "array"])
-      .optional(),
-   description: z.string().optional(),
-   eventNames: z.array(z.string()).optional(),
-   isNumerical: z.boolean().optional(),
-   tags: z.array(z.string()).optional(),
-});
+const updatePropertyDefinitionSchema = createInsertSchema(propertyDefinitions)
+   .pick({
+      name: true,
+      type: true,
+      description: true,
+      eventNames: true,
+      isNumerical: true,
+      tags: true,
+   })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
 // =============================================================================
 // Property Definition Procedures

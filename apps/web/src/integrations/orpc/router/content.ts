@@ -10,7 +10,10 @@ import {
    publishContent,
    updateContent,
 } from "@packages/database/repositories/content-repository";
-import { ContentMetaSchema } from "@packages/database/schemas/content";
+import {
+   content,
+   ContentMetaSchema,
+} from "@packages/database/schemas/content";
 import {
    CONTENT_EVENTS,
    emitContentArchived,
@@ -25,22 +28,18 @@ import {
 } from "@packages/events/credits";
 import { createEmitFn } from "@packages/events/emit";
 import { createSlug, generateRandomSuffix } from "@packages/utils/text";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Validation Schemas
-// =============================================================================
+const createContentSchema = createInsertSchema(content)
+   .pick({ body: true })
+   .extend({ title: z.string().min(1).default("Sem título") });
 
-const createContentSchema = z.object({
-   title: z.string().min(1).default("Sem título"),
-   body: z.string().optional(),
-});
-
-const updateContentSchema = z.object({
-   meta: ContentMetaSchema.partial().optional(),
-   body: z.string().optional(),
-});
+const updateContentSchema = createInsertSchema(content)
+   .pick({ body: true })
+   .partial()
+   .extend({ meta: ContentMetaSchema.partial().optional() });
 
 // =============================================================================
 // Content Procedures

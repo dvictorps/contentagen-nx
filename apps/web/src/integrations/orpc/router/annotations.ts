@@ -6,29 +6,23 @@ import {
    listAnnotations,
    updateAnnotation,
 } from "@packages/database/repositories/annotation-repository";
+import { annotations } from "@packages/database/schemas/annotations";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Validation Schemas
-// =============================================================================
-
-const createAnnotationSchema = z.object({
-   title: z.string().min(1),
-   description: z.string().optional(),
-   date: z.coerce.date(),
-   scope: z.enum(["global", "content", "forms", "ai"]).optional(),
-   metadata: z.record(z.string(), z.unknown()).optional(),
+const createAnnotationSchema = createInsertSchema(annotations).pick({
+   title: true,
+   description: true,
+   date: true,
+   scope: true,
+   metadata: true,
 });
 
-const updateAnnotationSchema = z.object({
-   id: z.string().uuid(),
-   title: z.string().min(1).optional(),
-   description: z.string().optional(),
-   date: z.coerce.date().optional(),
-   scope: z.enum(["global", "content", "forms", "ai"]).optional(),
-   metadata: z.record(z.string(), z.unknown()).optional(),
-});
+const updateAnnotationSchema = createInsertSchema(annotations)
+   .pick({ title: true, description: true, date: true, scope: true, metadata: true })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
 const listAnnotationsSchema = z.object({
    page: z.number().min(1).optional().default(1),

@@ -9,6 +9,7 @@ import {
    updateDashboardTiles,
 } from "@packages/database/repositories/dashboard-repository";
 import {
+   dashboards,
    DashboardDateRangeSchema,
    DashboardFilterSchema,
    type NewDashboard,
@@ -19,32 +20,24 @@ import {
    emitDashboardUpdated,
 } from "@packages/events/dashboard";
 import { createEmitFn } from "@packages/events/emit";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-const tileSchema = z.object({
-   insightId: z.string().uuid(),
-   size: z.enum(["sm", "md", "lg", "full"]),
-   order: z.number().int().min(0),
+const createDashboardSchema = createInsertSchema(dashboards).pick({
+   name: true,
+   description: true,
 });
 
-const createDashboardSchema = z.object({
-   name: z.string().min(1),
-   description: z.string().optional(),
-});
+const updateDashboardSchema = createInsertSchema(dashboards)
+   .pick({ name: true, description: true })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
-const updateDashboardSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   description: z.string().optional(),
-});
-
-const updateTilesSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   description: z.string().optional(),
-   tiles: z.array(tileSchema).optional(),
-});
+const updateTilesSchema = createInsertSchema(dashboards)
+   .pick({ name: true, description: true, tiles: true })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
 export const create = protectedProcedure
    .input(createDashboardSchema)
@@ -152,8 +145,7 @@ export const updateTiles = protectedProcedure
          await updateDashboardTiles(db, input.id, input.tiles);
       }
 
-      // Update metadata if provided
-      const metadataUpdate: { name?: string; description?: string } = {};
+      const metadataUpdate: { name?: string; description?: string | null } = {};
       if (input.name !== undefined) metadataUpdate.name = input.name;
       if (input.description !== undefined)
          metadataUpdate.description = input.description;

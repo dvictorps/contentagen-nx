@@ -74,6 +74,7 @@
       "better-auth": "catalog:auth",
       "clsx": "catalog:ui",
       "drizzle-orm": "catalog:database",
+      "drizzle-zod": "catalog:database",
       "lucide-react": "catalog:ui",
       "nitro": "npm:nitro-nightly@latest",
       "platejs": "catalog:editor",

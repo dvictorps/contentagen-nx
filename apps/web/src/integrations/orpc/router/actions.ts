@@ -6,28 +6,28 @@ import {
    listActions,
    updateAction,
 } from "@packages/database/repositories/action-repository";
+import { actions } from "@packages/database/schemas/actions";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
-// =============================================================================
-// Validation Schemas
-// =============================================================================
-
-const createActionSchema = z.object({
-   name: z.string().min(1),
-   eventPatterns: z.array(z.string()).min(1),
-   description: z.string().optional(),
-   matchType: z.enum(["any", "all"]).optional(),
+const createActionSchema = createInsertSchema(actions).pick({
+   name: true,
+   eventPatterns: true,
+   description: true,
+   matchType: true,
 });
 
-const updateActionSchema = z.object({
-   id: z.string().uuid(),
-   name: z.string().min(1).optional(),
-   description: z.string().optional(),
-   eventPatterns: z.array(z.string()).min(1).optional(),
-   matchType: z.enum(["any", "all"]).optional(),
-   isActive: z.boolean().optional(),
-});
+const updateActionSchema = createInsertSchema(actions)
+   .pick({
+      name: true,
+      description: true,
+      eventPatterns: true,
+      matchType: true,
+      isActive: true,
+   })
+   .partial()
+   .extend({ id: z.string().uuid() });
 
 // =============================================================================
 // Action Procedures

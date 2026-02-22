@@ -23,6 +23,7 @@ import {
    trackCreditUsage,
 } from "@packages/events/credits";
 import { createEmitFn } from "@packages/events/emit";
+import { assets } from "@packages/database/schemas/assets";
 import {
    deleteFile,
    generatePresignedPutUrl,
@@ -30,6 +31,7 @@ import {
    uploadFile,
 } from "@packages/files/client";
 import { generateImage as aiGenerateImage } from "ai";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { protectedProcedure } from "../server";
 
@@ -85,22 +87,23 @@ export const generateUploadUrl = protectedProcedure
       }
    });
 
+const completeUploadSchema = createInsertSchema(assets)
+   .pick({
+      fileKey: true,
+      publicUrl: true,
+      filename: true,
+      mimeType: true,
+      size: true,
+      width: true,
+      height: true,
+      alt: true,
+      caption: true,
+      tags: true,
+   })
+   .extend({ teamId: z.string().uuid().optional() });
+
 export const completeUpload = protectedProcedure
-   .input(
-      z.object({
-         teamId: z.uuid().optional(),
-         fileKey: z.string(),
-         publicUrl: z.string(),
-         filename: z.string(),
-         mimeType: z.string(),
-         size: z.number().int().positive(),
-         width: z.number().int().optional(),
-         height: z.number().int().optional(),
-         alt: z.string().optional(),
-         caption: z.string().optional(),
-         tags: z.array(z.string()).optional(),
-      }),
-   )
+   .input(completeUploadSchema)
    .handler(async ({ context, input }) => {
       const {
          db,
@@ -128,22 +131,24 @@ export const completeUpload = protectedProcedure
          uploaderId: userId,
       });
 
-      emitAssetUploadCompleted(
-         {
-            db,
-            posthog,
-            organizationId,
-            userId,
-            teamId: input.teamId ?? contextTeamId,
-         },
-         {
-            assetId: asset.id,
-            filename: asset.filename,
-            mimeType: asset.mimeType,
-            size: asset.size,
-            uploaderId: userId,
-         },
-      );
+      try {
+         emitAssetUploadCompleted(
+            {
+               db,
+               posthog,
+               organizationId,
+               userId,
+               teamId: input.teamId ?? contextTeamId,
+            },
+            {
+               assetId: asset.id,
+               filename: asset.filename,
+               mimeType: asset.mimeType,
+               size: asset.size,
+               uploaderId: userId,
+            },
+         );
+      } catch {}
 
       return asset;
    });
@@ -187,16 +192,13 @@ export const get = protectedProcedure
       return asset;
    });
 
+const updateAssetSchema = createInsertSchema(assets)
+   .pick({ filename: true, alt: true, caption: true, tags: true })
+   .partial()
+   .extend({ id: z.string().uuid() });
+
 export const update = protectedProcedure
-   .input(
-      z.object({
-         id: z.uuid(),
-         filename: z.string().min(1).optional(),
-         alt: z.string().optional(),
-         caption: z.string().optional(),
-         tags: z.array(z.string()).optional(),
-      }),
-   )
+   .input(updateAssetSchema)
    .handler(async ({ context, input }) => {
       const { db, organizationId } = context;
       const { id, ...data } = input;
@@ -227,10 +229,12 @@ export const remove = protectedProcedure
 
       await deleteAsset(db, input.id, organizationId);
 
-      emitAssetDeleted(
-         { db, posthog, organizationId, userId, teamId },
-         { assetId: input.id },
-      );
+      try {
+         emitAssetDeleted(
+            { db, posthog, organizationId, userId, teamId },
+            { assetId: input.id },
+         );
+      } catch {}
 
       return { success: true };
    });
